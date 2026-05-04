@@ -1,0 +1,370 @@
+<?php
+declare(strict_types=1);
+
+function set_language_from_request(): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    $lang = $_GET['lang'] ?? '';
+    if (in_array($lang, ['ar', 'en'], true)) {
+        $_SESSION['lang'] = $lang;
+    }
+}
+
+function current_lang(): string
+{
+    $lang = $_SESSION['lang'] ?? 'ar';
+    return in_array($lang, ['ar', 'en'], true) ? $lang : 'ar';
+}
+
+function page_dir(): string
+{
+    return current_lang() === 'ar' ? 'rtl' : 'ltr';
+}
+
+function t(string $key, array $replace = []): string
+{
+    $translations = [
+        'ar' => [
+            'site.title' => 'PMMS',
+            'nav.requests' => 'الطلبات',
+            'nav.bids' => 'العروض',
+            'nav.messages' => 'الرسائل',
+            'nav.reviews' => 'التقييمات',
+            'nav.marketing' => 'التسويق',
+            'nav.admin' => 'الأدمن',
+            'nav.logout' => 'خروج',
+            'nav.login' => 'دخول',
+            'nav.register' => 'تسجيل',
+            'nav.language' => 'اللغة',
+            'lang.ar' => 'العربية',
+            'lang.en' => 'English',
+            'common.role' => 'الدور',
+
+            'role.client' => 'عميل',
+            'role.provider' => 'مقدم خدمة',
+            'role.admin' => 'أدمن',
+
+            'dashboard.welcome' => 'مرحباً {name}',
+            'dashboard.role' => 'الدور: {role}',
+            'dashboard.manage_requests' => 'إدارة الطلبات',
+            'dashboard.marketing_discounts' => 'التسويق والخصومات',
+            'dashboard.admin_panel' => 'لوحة الأدمن',
+
+            'auth.login_title' => 'تسجيل الدخول',
+            'auth.register_title' => 'تسجيل حساب جديد',
+            'auth.name' => 'الاسم',
+            'auth.email' => 'البريد الإلكتروني',
+            'auth.password' => 'كلمة المرور',
+            'auth.account_type' => 'نوع الحساب',
+            'auth.have_account' => 'عندي حساب بالفعل',
+            'auth.create_account' => 'إنشاء حساب جديد',
+            'auth.invalid_login' => 'بيانات الدخول غير صحيحة',
+            'auth.all_required' => 'كل الحقول مطلوبة',
+            'auth.invalid_role' => 'نوع مستخدم غير صالح',
+            'auth.email_exists' => 'البريد مستخدم مسبقاً',
+            'auth.created_success' => 'تم إنشاء الحساب بنجاح، سجل الدخول الآن',
+            'auth.created_failed' => 'فشل إنشاء الحساب',
+
+            'requests.title' => 'الطلبات',
+            'requests.new' => 'نشر طلب جديد',
+            'requests.my_requests' => 'طلباتي',
+            'requests.open_requests' => 'الطلبات المفتوحة',
+            'requests.request_title' => 'عنوان الطلب',
+            'requests.service_type' => 'نوع الخدمة',
+            'requests.budget' => 'الميزانية',
+            'requests.location' => 'الموقع',
+            'requests.due_date' => 'آخر موعد',
+            'requests.publish' => 'نشر الطلب',
+            'requests.client' => 'العميل',
+            'requests.offers' => 'العروض',
+            'requests.view_offers' => 'عرض العروض ({count})',
+            'requests.submit_bid' => 'تقديم عرض',
+            'requests.invalid_data' => 'أدخل كل بيانات الطلب بشكل صحيح',
+            'requests.created' => 'تم إنشاء الطلب',
+            'requests.create_failed' => 'فشل إنشاء الطلب',
+
+            'bids.title' => 'العروض',
+            'bids.submit_on' => 'تقديم عرض على: {title}',
+            'bids.price' => 'السعر',
+            'bids.duration_days' => 'المدة بالأيام',
+            'bids.details' => 'تفاصيل العمل',
+            'bids.send' => 'إرسال العرض',
+            'bids.current' => 'العروض الحالية',
+            'bids.my_bids' => 'عروضي',
+            'bids.request_title' => 'الطلب',
+            'bids.provider' => 'مقدم الخدمة',
+            'bids.rating' => 'التقييم',
+            'bids.status' => 'الحالة',
+            'bids.select_request_first' => 'اختر طلباً من صفحة الطلبات ثم قدم عرضك.',
+            'bids.manage' => 'إدارة العروض',
+            'bids.request_bids' => 'عروض الطلب: {title}',
+            'bids.select' => 'اختيار',
+            'bids.finish_service' => 'إنهاء الخدمة',
+            'bids.invalid_bid_data' => 'بيانات العرض غير مكتملة',
+            'bids.request_not_open' => 'لا يمكن تقديم عرض على طلب غير مفتوح',
+            'bids.already_submitted' => 'لقد قدمت عرضاً لهذا الطلب مسبقاً',
+            'bids.sent' => 'تم إرسال العرض',
+            'bids.send_failed' => 'فشل إرسال العرض',
+            'bids.cannot_accept' => 'لا يمكن قبول العرض',
+            'bids.accepted' => 'تم اختيار مقدم الخدمة وبدء التنفيذ',
+            'bids.accept_failed' => 'فشل اختيار العرض',
+            'bids.invalid_request' => 'طلب غير صالح',
+            'bids.completed' => 'تم إنهاء الطلب',
+            'bids.complete_failed' => 'تعذر إنهاء الطلب',
+            'bids.days' => 'يوم',
+
+            'messages.title' => 'الرسائل',
+            'messages.conversations' => 'المحادثات',
+            'messages.request' => 'الطلب',
+            'messages.open' => 'فتح',
+            'messages.chat' => 'الدردشة',
+            'messages.write_message' => 'اكتب رسالة',
+            'messages.send' => 'إرسال',
+            'messages.send_unable' => 'تعذر إرسال الرسالة',
+            'messages.sent' => 'تم إرسال الرسالة',
+            'messages.send_failed' => 'فشل إرسال الرسالة',
+
+            'reviews.title' => 'التقييمات',
+            'reviews.pending' => 'طلبات جاهزة للتقييم',
+            'reviews.rating_5' => 'التقييم من 5',
+            'reviews.comment' => 'التعليق',
+            'reviews.save' => 'حفظ التقييم',
+            'reviews.clients_reviews' => 'تقييمات العملاء',
+            'reviews.invalid' => 'بيانات التقييم غير صحيحة',
+            'reviews.saved' => 'تم حفظ التقييم',
+            'reviews.save_failed' => 'تعذر حفظ التقييم',
+
+            'marketing.title' => 'التسويق والخصومات',
+            'marketing.create_new' => 'إنشاء عرض جديد',
+            'marketing.offer_title' => 'عنوان العرض',
+            'marketing.discount_type' => 'نوع الخصم',
+            'marketing.discount_value' => 'قيمة الخصم',
+            'marketing.start_date' => 'تاريخ البداية',
+            'marketing.end_date' => 'تاريخ النهاية',
+            'marketing.save_offer' => 'حفظ العرض',
+            'marketing.my_offers' => 'عروضي',
+            'marketing.type' => 'النوع',
+            'marketing.value' => 'القيمة',
+            'marketing.period' => 'الفترة',
+            'marketing.active' => 'فعال',
+            'marketing.stopped' => 'متوقف',
+            'marketing.stop' => 'إيقاف',
+            'marketing.activate' => 'تفعيل',
+            'marketing.invalid' => 'بيانات العرض الترويجي غير صحيحة',
+            'marketing.created' => 'تم إنشاء العرض الترويجي',
+            'marketing.create_failed' => 'فشل إنشاء العرض',
+            'marketing.status_updated' => 'تم تحديث حالة العرض',
+            'marketing.status_update_failed' => 'فشل تحديث الحالة',
+            'marketing.percent' => 'نسبة مئوية',
+            'marketing.fixed' => 'قيمة ثابتة',
+
+            'admin.title' => 'لوحة الأدمن',
+            'admin.overview' => 'نظرة سريعة على المستخدمين والطلبات والعروض والعمليات داخل النظام.',
+            'admin.users' => 'المستخدمين',
+            'admin.requests' => 'الطلبات',
+            'admin.bids' => 'العروض',
+            'admin.transactions' => 'العمليات',
+            'admin.latest_users' => 'آخر المستخدمين',
+            'admin.latest_requests' => 'آخر الطلبات',
+            'admin.latest_bids' => 'آخر العروض',
+            'admin.latest_transactions' => 'آخر العمليات',
+            'admin.before_discount' => 'قبل الخصم',
+            'admin.discount' => 'الخصم',
+            'admin.after_discount' => 'بعد الخصم',
+            'admin.empty' => 'لا توجد بيانات حالياً',
+
+            'status.open' => 'مفتوح',
+            'status.in_progress' => 'قيد التنفيذ',
+            'status.completed' => 'مكتمل',
+            'status.cancelled' => 'ملغي',
+            'status.pending' => 'قيد الانتظار',
+            'status.accepted' => 'مقبول',
+            'status.rejected' => 'مرفوض'
+        ],
+        'en' => [
+            'site.title' => 'PMMS',
+            'nav.requests' => 'Requests',
+            'nav.bids' => 'Bids',
+            'nav.messages' => 'Messages',
+            'nav.reviews' => 'Reviews',
+            'nav.marketing' => 'Marketing',
+            'nav.admin' => 'Admin',
+            'nav.logout' => 'Logout',
+            'nav.login' => 'Login',
+            'nav.register' => 'Register',
+            'nav.language' => 'Language',
+            'lang.ar' => 'Arabic',
+            'lang.en' => 'English',
+            'common.role' => 'Role',
+
+            'role.client' => 'Client',
+            'role.provider' => 'Provider',
+            'role.admin' => 'Admin',
+
+            'dashboard.welcome' => 'Welcome {name}',
+            'dashboard.role' => 'Role: {role}',
+            'dashboard.manage_requests' => 'Manage Requests',
+            'dashboard.marketing_discounts' => 'Marketing & Discounts',
+            'dashboard.admin_panel' => 'Admin Panel',
+
+            'auth.login_title' => 'Login',
+            'auth.register_title' => 'Create New Account',
+            'auth.name' => 'Name',
+            'auth.email' => 'Email',
+            'auth.password' => 'Password',
+            'auth.account_type' => 'Account Type',
+            'auth.have_account' => 'I already have an account',
+            'auth.create_account' => 'Create a new account',
+            'auth.invalid_login' => 'Invalid login credentials',
+            'auth.all_required' => 'All fields are required',
+            'auth.invalid_role' => 'Invalid user type',
+            'auth.email_exists' => 'Email already exists',
+            'auth.created_success' => 'Account created successfully, login now',
+            'auth.created_failed' => 'Failed to create account',
+
+            'requests.title' => 'Requests',
+            'requests.new' => 'Post New Request',
+            'requests.my_requests' => 'My Requests',
+            'requests.open_requests' => 'Open Requests',
+            'requests.request_title' => 'Request Title',
+            'requests.service_type' => 'Service Type',
+            'requests.budget' => 'Budget',
+            'requests.location' => 'Location',
+            'requests.due_date' => 'Due Date',
+            'requests.publish' => 'Publish Request',
+            'requests.client' => 'Client',
+            'requests.offers' => 'Bids',
+            'requests.view_offers' => 'View Bids ({count})',
+            'requests.submit_bid' => 'Submit Bid',
+            'requests.invalid_data' => 'Please enter valid request data',
+            'requests.created' => 'Request created',
+            'requests.create_failed' => 'Failed to create request',
+
+            'bids.title' => 'Bids',
+            'bids.submit_on' => 'Submit bid on: {title}',
+            'bids.price' => 'Price',
+            'bids.duration_days' => 'Duration (days)',
+            'bids.details' => 'Work Details',
+            'bids.send' => 'Send Bid',
+            'bids.current' => 'Current Bids',
+            'bids.my_bids' => 'My Bids',
+            'bids.request_title' => 'Request',
+            'bids.provider' => 'Provider',
+            'bids.rating' => 'Rating',
+            'bids.status' => 'Status',
+            'bids.select_request_first' => 'Select a request first from the requests page.',
+            'bids.manage' => 'Manage Bids',
+            'bids.request_bids' => 'Bids for request: {title}',
+            'bids.select' => 'Select',
+            'bids.finish_service' => 'Finish Service',
+            'bids.invalid_bid_data' => 'Bid data is incomplete',
+            'bids.request_not_open' => 'You can only bid on open requests',
+            'bids.already_submitted' => 'You already submitted a bid for this request',
+            'bids.sent' => 'Bid sent',
+            'bids.send_failed' => 'Failed to send bid',
+            'bids.cannot_accept' => 'Cannot accept this bid',
+            'bids.accepted' => 'Provider selected and work started',
+            'bids.accept_failed' => 'Failed to select bid',
+            'bids.invalid_request' => 'Invalid request',
+            'bids.completed' => 'Request completed',
+            'bids.complete_failed' => 'Failed to complete request',
+            'bids.days' => 'day',
+
+            'messages.title' => 'Messages',
+            'messages.conversations' => 'Conversations',
+            'messages.request' => 'Request',
+            'messages.open' => 'Open',
+            'messages.chat' => 'Chat',
+            'messages.write_message' => 'Write a message',
+            'messages.send' => 'Send',
+            'messages.send_unable' => 'Unable to send message',
+            'messages.sent' => 'Message sent',
+            'messages.send_failed' => 'Failed to send message',
+
+            'reviews.title' => 'Reviews',
+            'reviews.pending' => 'Requests Ready for Review',
+            'reviews.rating_5' => 'Rating out of 5',
+            'reviews.comment' => 'Comment',
+            'reviews.save' => 'Save Review',
+            'reviews.clients_reviews' => 'Client Reviews',
+            'reviews.invalid' => 'Invalid review data',
+            'reviews.saved' => 'Review saved',
+            'reviews.save_failed' => 'Failed to save review',
+
+            'marketing.title' => 'Marketing & Discounts',
+            'marketing.create_new' => 'Create New Promotion',
+            'marketing.offer_title' => 'Promotion Title',
+            'marketing.discount_type' => 'Discount Type',
+            'marketing.discount_value' => 'Discount Value',
+            'marketing.start_date' => 'Start Date',
+            'marketing.end_date' => 'End Date',
+            'marketing.save_offer' => 'Save Promotion',
+            'marketing.my_offers' => 'My Promotions',
+            'marketing.type' => 'Type',
+            'marketing.value' => 'Value',
+            'marketing.period' => 'Period',
+            'marketing.active' => 'Active',
+            'marketing.stopped' => 'Stopped',
+            'marketing.stop' => 'Stop',
+            'marketing.activate' => 'Activate',
+            'marketing.invalid' => 'Invalid promotion data',
+            'marketing.created' => 'Promotion created',
+            'marketing.create_failed' => 'Failed to create promotion',
+            'marketing.status_updated' => 'Promotion status updated',
+            'marketing.status_update_failed' => 'Failed to update status',
+            'marketing.percent' => 'Percent',
+            'marketing.fixed' => 'Fixed',
+
+            'admin.title' => 'Admin Panel',
+            'admin.overview' => 'A quick overview of users, requests, bids, and transactions across the system.',
+            'admin.users' => 'Users',
+            'admin.requests' => 'Requests',
+            'admin.bids' => 'Bids',
+            'admin.transactions' => 'Transactions',
+            'admin.latest_users' => 'Latest Users',
+            'admin.latest_requests' => 'Latest Requests',
+            'admin.latest_bids' => 'Latest Bids',
+            'admin.latest_transactions' => 'Latest Transactions',
+            'admin.before_discount' => 'Before Discount',
+            'admin.discount' => 'Discount',
+            'admin.after_discount' => 'After Discount',
+            'admin.empty' => 'No data available yet',
+
+            'status.open' => 'Open',
+            'status.in_progress' => 'In Progress',
+            'status.completed' => 'Completed',
+            'status.cancelled' => 'Cancelled',
+            'status.pending' => 'Pending',
+            'status.accepted' => 'Accepted',
+            'status.rejected' => 'Rejected'
+        ]
+    ];
+
+    $lang = current_lang();
+    $text = $translations[$lang][$key] ?? $translations['ar'][$key] ?? $key;
+    foreach ($replace as $k => $v) {
+        $text = str_replace('{' . $k . '}', (string) $v, $text);
+    }
+    return $text;
+}
+
+function switch_lang_url(string $lang): string
+{
+    $uri = $_SERVER['REQUEST_URI'] ?? '/dashboard.php';
+    $parts = parse_url($uri);
+    $path = $parts['path'] ?? '/dashboard.php';
+    $query = [];
+    if (!empty($parts['query'])) {
+        parse_str($parts['query'], $query);
+    }
+    $query['lang'] = $lang;
+    return $path . '?' . http_build_query($query);
+}
+
+function status_label(string $status): string
+{
+    return t('status.' . $status);
+}
+
