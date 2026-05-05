@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/_init.php';
-require_login();
+require_role([ROLE_CLIENT, ROLE_PROVIDER]);
 $user = current_user();
 
 $requestId = (int) ($_GET['request_id'] ?? $_POST['request_id'] ?? 0);
 $error = '';
 $ok = '';
-$providerOpenRequests = $user['role'] === ROLE_PROVIDER ? get_open_requests() : [];
+$providerOpenRequests = $user['role'] === ROLE_PROVIDER ? get_open_requests(true) : [];
 if ($user['role'] === ROLE_PROVIDER && $requestId <= 0 && count($providerOpenRequests) > 0) {
     $requestId = (int) $providerOpenRequests[0]['id'];
 }
@@ -79,14 +79,14 @@ if ($requestId > 0) {
         }
     }
     if ($request) {
-        $bids = get_bids_for_request($requestId);
+        $bids = get_bids_for_request($requestId, true);
     }
 }
 if ($user['role'] === ROLE_PROVIDER) {
-    $providerBids = get_bids_by_provider((int) $user['id']);
+    $providerBids = get_bids_by_provider((int) $user['id'], true);
 }
 
-$clientRequests = $user['role'] === ROLE_CLIENT ? get_requests_by_client((int) $user['id']) : [];
+$clientRequests = $user['role'] === ROLE_CLIENT ? get_requests_by_client((int) $user['id'], true) : [];
 
 require __DIR__ . '/_header.php';
 ?>

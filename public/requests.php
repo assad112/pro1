@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/_init.php';
-require_login();
+require_role([ROLE_CLIENT, ROLE_PROVIDER]);
 $user = current_user();
 
 $error = '';
@@ -30,9 +30,9 @@ $clientRequests = [];
 $openRequests = [];
 
 if ($user['role'] === ROLE_CLIENT) {
-    $clientRequests = get_requests_by_client((int) $user['id']);
+    $clientRequests = get_requests_by_client((int) $user['id'], true);
 } else {
-    $openRequests = get_open_requests();
+    $openRequests = get_open_requests(true);
 }
 
 require __DIR__ . '/_header.php';

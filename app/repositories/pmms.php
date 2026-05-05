@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../db.php';
 
+function real_user_filter(string $alias): string
+{
+    return $alias . ".email NOT LIKE '%@pmms.local'";
+}
+
 function create_user(string $name, string $email, string $password, string $role): bool
 {
     $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -30,25 +35,38 @@ function create_service_request(int $clientId, string $title, string $category, 
     return $stmt->affected_rows > 0;
 }
 
-function get_open_requests(): array
+function get_open_requests(bool $realUsersOnly = false): array
 {
+    $where = 'r.status = "open"';
+    if ($realUsersOnly) {
+        $where .= ' AND ' . real_user_filter('u');
+    }
+
     $stmt = run_query(
         'SELECT r.*, u.name AS client_name
          FROM service_requests r
          JOIN users u ON u.id = r.client_id
-         WHERE r.status = "open"
+         WHERE ' . $where . '
          ORDER BY r.created_at DESC'
     );
     return fetch_all_assoc($stmt);
 }
 
-function get_requests_by_client(int $clientId): array
+function get_requests_by_client(int $clientId, bool $realUsersOnly = false): array
 {
+    $where = 'r.client_id = ?';
+    $join = '';
+    if ($realUsersOnly) {
+        $join = ' JOIN users client ON client.id = r.client_id';
+        $where .= ' AND ' . real_user_filter('client');
+    }
+
     $stmt = run_query(
         'SELECT r.*,
             (SELECT COUNT(*) FROM bids b WHERE b.request_id = r.id) AS bids_count
          FROM service_requests r
-         WHERE r.client_id = ?
+         ' . $join . '
+         WHERE ' . $where . '
          ORDER BY r.created_at DESC',
         'i',
         [$clientId]
@@ -84,14 +102,23 @@ function provider_has_bid(int $requestId, int $providerId): bool
     return $row !== null;
 }
 
-function get_bids_for_request(int $requestId): array
+function get_bids_for_request(int $requestId, bool $realUsersOnly = false): array
 {
+    $where = 'b.request_id = ?';
+    $joins = '';
+    if ($realUsersOnly) {
+        $joins = ' JOIN service_requests sr ON sr.id = b.request_id
+                   JOIN users client ON client.id = sr.client_id';
+        $where .= ' AND ' . real_user_filter('u') . ' AND ' . real_user_filter('client');
+    }
+
     $stmt = run_query(
         'SELECT b.*, u.name AS provider_name,
             (SELECT ROUND(AVG(r.rating), 2) FROM reviews r WHERE r.provider_id = b.provider_id) AS rating_avg
          FROM bids b
          JOIN users u ON u.id = b.provider_id
-         WHERE b.request_id = ?
+         ' . $joins . '
+         WHERE ' . $where . '
          ORDER BY b.price ASC, b.created_at ASC',
         'i',
         [$requestId]
@@ -99,13 +126,22 @@ function get_bids_for_request(int $requestId): array
     return fetch_all_assoc($stmt);
 }
 
-function get_bids_by_provider(int $providerId): array
+function get_bids_by_provider(int $providerId, bool $realUsersOnly = false): array
 {
+    $where = 'b.provider_id = ?';
+    $joins = '';
+    if ($realUsersOnly) {
+        $joins = ' JOIN users provider ON provider.id = b.provider_id
+                   JOIN users client ON client.id = r.client_id';
+        $where .= ' AND ' . real_user_filter('provider') . ' AND ' . real_user_filter('client');
+    }
+
     $stmt = run_query(
         'SELECT b.*, r.title AS request_title, r.status AS request_status
          FROM bids b
          JOIN service_requests r ON r.id = b.request_id
-         WHERE b.provider_id = ?
+         ' . $joins . '
+         WHERE ' . $where . '
          ORDER BY b.created_at DESC',
         'i',
         [$providerId]
@@ -198,8 +234,13 @@ function complete_request(int $requestId, int $clientId): bool
     return $stmt->affected_rows > 0;
 }
 
-function get_user_conversations(int $userId): array
+function get_user_conversations(int $userId, bool $realUsersOnly = false): array
 {
+    $where = '(c.client_id = ? OR c.provider_id = ?)';
+    if ($realUsersOnly) {
+        $where .= ' AND ' . real_user_filter('cu') . ' AND ' . real_user_filter('pu');
+    }
+
     $stmt = run_query(
         'SELECT c.*, r.title,
             cu.name AS client_name,
@@ -208,7 +249,7 @@ function get_user_conversations(int $userId): array
          JOIN service_requests r ON r.id = c.request_id
          JOIN users cu ON cu.id = c.client_id
          JOIN users pu ON pu.id = c.provider_id
-         WHERE c.client_id = ? OR c.provider_id = ?
+         WHERE ' . $where . '
          ORDER BY c.created_at DESC',
         'ii',
         [$userId, $userId]
@@ -250,16 +291,22 @@ function send_message(int $conversationId, int $senderId, string $body): bool
     return $stmt->affected_rows > 0;
 }
 
-function get_completed_requests_for_review(int $clientId): array
+function get_completed_requests_for_review(int $clientId, bool $realUsersOnly = false): array
 {
+    $where = 'r.client_id = ?
+           AND r.status = "completed"
+           AND rv.id IS NULL';
+    if ($realUsersOnly) {
+        $where .= ' AND ' . real_user_filter('client') . ' AND ' . real_user_filter('u');
+    }
+
     $stmt = run_query(
         'SELECT r.id, r.title, r.selected_provider_id, u.name AS provider_name
          FROM service_requests r
+         JOIN users client ON client.id = r.client_id
          JOIN users u ON u.id = r.selected_provider_id
          LEFT JOIN reviews rv ON rv.request_id = r.id
-         WHERE r.client_id = ?
-           AND r.status = "completed"
-           AND rv.id IS NULL
+         WHERE ' . $where . '
          ORDER BY r.created_at DESC',
         'i',
         [$clientId]
@@ -285,14 +332,20 @@ function add_review(int $requestId, int $clientId, int $providerId, int $rating,
     return $stmt->affected_rows > 0;
 }
 
-function get_provider_reviews(int $providerId): array
+function get_provider_reviews(int $providerId, bool $realUsersOnly = false): array
 {
+    $where = 'r.provider_id = ?';
+    if ($realUsersOnly) {
+        $where .= ' AND ' . real_user_filter('provider') . ' AND ' . real_user_filter('u');
+    }
+
     $stmt = run_query(
         'SELECT r.*, u.name AS client_name, sr.title
          FROM reviews r
          JOIN users u ON u.id = r.client_id
+         JOIN users provider ON provider.id = r.provider_id
          JOIN service_requests sr ON sr.id = r.request_id
-         WHERE r.provider_id = ?
+         WHERE ' . $where . '
          ORDER BY r.created_at DESC',
         'i',
         [$providerId]
@@ -311,10 +364,20 @@ function create_promotion(int $providerId, string $title, string $type, float $v
     return $stmt->affected_rows > 0;
 }
 
-function get_provider_promotions(int $providerId): array
+function get_provider_promotions(int $providerId, bool $realUsersOnly = false): array
 {
+    $where = 'p.provider_id = ?';
+    $join = '';
+    if ($realUsersOnly) {
+        $join = ' JOIN users provider ON provider.id = p.provider_id';
+        $where .= ' AND ' . real_user_filter('provider');
+    }
+
     $stmt = run_query(
-        'SELECT * FROM promotions WHERE provider_id = ? ORDER BY created_at DESC',
+        'SELECT p.* FROM promotions p
+         ' . $join . '
+         WHERE ' . $where . '
+         ORDER BY p.created_at DESC',
         'i',
         [$providerId]
     );
@@ -331,19 +394,339 @@ function toggle_promotion(int $promotionId, int $providerId, int $active): bool
     return $stmt->affected_rows > 0;
 }
 
+function provider_analytics(int $providerId): array
+{
+    // Provider dashboard is scoped to the signed-in provider only.
+    $realProvider = real_user_filter('provider');
+    $realClient = real_user_filter('client');
+
+    $bidSummary = fetch_one_assoc(
+        run_query(
+            "SELECT
+                COUNT(*) AS total_bids,
+                COALESCE(SUM(b.status = 'accepted'), 0) AS accepted_bids,
+                COALESCE(SUM(b.status = 'pending'), 0) AS pending_bids,
+                COALESCE(SUM(b.status = 'rejected'), 0) AS rejected_bids,
+                COALESCE(AVG(b.price), 0) AS average_bid
+             FROM bids b
+             JOIN users provider ON provider.id = b.provider_id
+             JOIN service_requests r ON r.id = b.request_id
+             JOIN users client ON client.id = r.client_id
+             WHERE b.provider_id = ?
+               AND {$realProvider}
+               AND {$realClient}",
+            'i',
+            [$providerId]
+        )
+    ) ?: [];
+
+    $revenueSummary = fetch_one_assoc(
+        run_query(
+            "SELECT
+                COUNT(t.id) AS sales_count,
+                COALESCE(SUM(t.final_price), 0) AS total_revenue,
+                COALESCE(SUM(t.discount_amount), 0) AS total_discount
+             FROM service_requests r
+             JOIN users provider ON provider.id = r.selected_provider_id
+             JOIN users client ON client.id = r.client_id
+             LEFT JOIN transactions t ON t.request_id = r.id
+             WHERE r.selected_provider_id = ?
+               AND {$realProvider}
+               AND {$realClient}",
+            'i',
+            [$providerId]
+        )
+    ) ?: [];
+
+    $reviewSummary = fetch_one_assoc(
+        run_query(
+            "SELECT COUNT(*) AS reviews_count, COALESCE(ROUND(AVG(rating), 2), 0) AS average_rating
+             FROM reviews rv
+             JOIN users provider ON provider.id = rv.provider_id
+             JOIN users client ON client.id = rv.client_id
+             WHERE rv.provider_id = ?
+               AND {$realProvider}
+               AND {$realClient}",
+            'i',
+            [$providerId]
+        )
+    ) ?: [];
+
+    $promotionSummary = fetch_one_assoc(
+        run_query(
+            "SELECT
+                COUNT(*) AS promotions_count,
+                COALESCE(SUM(is_active = 1 AND CURDATE() BETWEEN start_date AND end_date), 0) AS active_promotions
+             FROM promotions p
+             JOIN users provider ON provider.id = p.provider_id
+             WHERE p.provider_id = ?
+               AND {$realProvider}",
+            'i',
+            [$providerId]
+        )
+    ) ?: [];
+
+    $monthlyRevenue = fetch_all_assoc(
+        run_query(
+            "SELECT
+                DATE_FORMAT(t.created_at, '%Y-%m') AS month_key,
+                DATE_FORMAT(t.created_at, '%b') AS month_label,
+                COALESCE(SUM(t.final_price), 0) AS revenue
+             FROM transactions t
+             JOIN service_requests r ON r.id = t.request_id
+             JOIN users provider ON provider.id = r.selected_provider_id
+             JOIN users client ON client.id = r.client_id
+             WHERE r.selected_provider_id = ?
+               AND {$realProvider}
+               AND {$realClient}
+               AND t.created_at >= DATE_FORMAT(CURDATE() - INTERVAL 5 MONTH, '%Y-%m-01')
+             GROUP BY DATE_FORMAT(t.created_at, '%Y-%m'), DATE_FORMAT(t.created_at, '%b')
+             ORDER BY month_key",
+            'i',
+            [$providerId]
+        )
+    );
+
+    $bidStatus = fetch_all_assoc(
+        run_query(
+            "SELECT b.status, COUNT(*) AS total
+             FROM bids b
+             JOIN users provider ON provider.id = b.provider_id
+             JOIN service_requests r ON r.id = b.request_id
+             JOIN users client ON client.id = r.client_id
+             WHERE b.provider_id = ?
+               AND {$realProvider}
+               AND {$realClient}
+             GROUP BY b.status
+             ORDER BY total DESC",
+            'i',
+            [$providerId]
+        )
+    );
+
+    $categoryPerformance = fetch_all_assoc(
+        run_query(
+            "SELECT
+                r.category,
+                COUNT(*) AS bids_count,
+                COALESCE(SUM(b.status = 'accepted'), 0) AS accepted_count,
+                COALESCE(SUM(t.final_price), 0) AS revenue
+             FROM bids b
+             JOIN service_requests r ON r.id = b.request_id
+             JOIN users provider ON provider.id = b.provider_id
+             JOIN users client ON client.id = r.client_id
+             LEFT JOIN transactions t ON t.request_id = r.id AND r.selected_provider_id = b.provider_id
+             WHERE b.provider_id = ?
+               AND {$realProvider}
+               AND {$realClient}
+             GROUP BY r.category
+             ORDER BY revenue DESC, accepted_count DESC, bids_count DESC
+             LIMIT 5",
+            'i',
+            [$providerId]
+        )
+    );
+
+    return [
+        'overview' => array_merge($bidSummary, $revenueSummary, $reviewSummary, $promotionSummary),
+        'monthly_revenue' => $monthlyRevenue,
+        'bid_status' => $bidStatus,
+        'category_performance' => $categoryPerformance,
+    ];
+}
+
 function admin_counts(): array
 {
     $data = [];
-    $data['users'] = (int) (fetch_one_assoc(run_query('SELECT COUNT(*) AS c FROM users'))['c'] ?? 0);
-    $data['requests'] = (int) (fetch_one_assoc(run_query('SELECT COUNT(*) AS c FROM service_requests'))['c'] ?? 0);
-    $data['bids'] = (int) (fetch_one_assoc(run_query('SELECT COUNT(*) AS c FROM bids'))['c'] ?? 0);
-    $data['transactions'] = (int) (fetch_one_assoc(run_query('SELECT COUNT(*) AS c FROM transactions'))['c'] ?? 0);
+    $realUser = real_user_filter('u');
+    $realClient = real_user_filter('client');
+    $realProvider = real_user_filter('provider');
+
+    $data['users'] = (int) (fetch_one_assoc(run_query("SELECT COUNT(*) AS c FROM users u WHERE {$realUser}"))['c'] ?? 0);
+    $data['requests'] = (int) (fetch_one_assoc(run_query(
+        "SELECT COUNT(*) AS c
+         FROM service_requests r
+         JOIN users client ON client.id = r.client_id
+         LEFT JOIN users provider ON provider.id = r.selected_provider_id
+         WHERE {$realClient}
+           AND (provider.id IS NULL OR {$realProvider})"
+    ))['c'] ?? 0);
+    $data['bids'] = (int) (fetch_one_assoc(run_query(
+        "SELECT COUNT(*) AS c
+         FROM bids b
+         JOIN users provider ON provider.id = b.provider_id
+         JOIN service_requests r ON r.id = b.request_id
+         JOIN users client ON client.id = r.client_id
+         WHERE {$realClient}
+           AND {$realProvider}"
+    ))['c'] ?? 0);
+    $data['transactions'] = (int) (fetch_one_assoc(run_query(
+        "SELECT COUNT(*) AS c
+         FROM transactions t
+         JOIN service_requests r ON r.id = t.request_id
+         JOIN users client ON client.id = r.client_id
+         JOIN users provider ON provider.id = r.selected_provider_id
+         WHERE {$realClient}
+           AND {$realProvider}"
+    ))['c'] ?? 0);
     return $data;
+}
+
+function admin_sales_analytics(): array
+{
+    // Admin analytics aggregates all real users and skips seeded demo accounts.
+    $realProvider = real_user_filter('provider');
+    $realClient = real_user_filter('client');
+
+    $overview = fetch_one_assoc(
+        run_query(
+            "SELECT
+                COALESCE(SUM(t.final_price), 0) AS total_revenue,
+                COALESCE(SUM(t.original_price), 0) AS target_revenue,
+                COALESCE(SUM(t.discount_amount), 0) AS total_discount,
+                COUNT(*) AS sales_count,
+                COALESCE(SUM(CASE WHEN t.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN t.final_price ELSE 0 END), 0) AS current_month_revenue,
+                COALESCE(SUM(CASE
+                    WHEN t.created_at >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')
+                     AND t.created_at < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                    THEN t.final_price ELSE 0 END), 0) AS previous_month_revenue
+             FROM transactions t
+             JOIN service_requests r ON r.id = t.request_id
+             JOIN users client ON client.id = r.client_id
+             JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE {$realClient}
+               AND {$realProvider}"
+        )
+    ) ?: [];
+
+    $requestSummary = fetch_one_assoc(
+        run_query(
+            "SELECT
+                COUNT(*) AS total_requests,
+                COALESCE(SUM(r.status = 'completed'), 0) AS completed_requests,
+                COALESCE(SUM(r.status = 'in_progress'), 0) AS active_requests,
+                COALESCE(SUM(r.status = 'open'), 0) AS open_requests,
+                COALESCE(SUM(r.status = 'cancelled'), 0) AS cancelled_requests
+             FROM service_requests r
+             JOIN users client ON client.id = r.client_id
+             LEFT JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE {$realClient}
+               AND (provider.id IS NULL OR {$realProvider})"
+        )
+    ) ?: [];
+
+    $bidSummary = fetch_one_assoc(
+        run_query(
+            "SELECT
+                COUNT(*) AS total_bids,
+                COALESCE(SUM(b.status = 'accepted'), 0) AS accepted_bids,
+                COALESCE(SUM(b.status = 'pending'), 0) AS pending_bids,
+                COALESCE(AVG(b.price), 0) AS average_bid
+             FROM bids b
+             JOIN users provider ON provider.id = b.provider_id
+             JOIN service_requests r ON r.id = b.request_id
+             JOIN users client ON client.id = r.client_id
+             WHERE {$realClient}
+               AND {$realProvider}"
+        )
+    ) ?: [];
+
+    $promotionSummary = fetch_one_assoc(
+        run_query(
+            "SELECT COUNT(*) AS active_promotions
+             FROM promotions p
+             JOIN users provider ON provider.id = p.provider_id
+             WHERE p.is_active = 1
+               AND CURDATE() BETWEEN p.start_date AND p.end_date
+               AND {$realProvider}"
+        )
+    ) ?: [];
+
+    $monthlyRevenue = fetch_all_assoc(
+        run_query(
+            "SELECT
+                DATE_FORMAT(t.created_at, '%Y-%m') AS month_key,
+                DATE_FORMAT(t.created_at, '%b') AS month_label,
+                COALESCE(SUM(t.final_price), 0) AS revenue
+             FROM transactions t
+             JOIN service_requests r ON r.id = t.request_id
+             JOIN users client ON client.id = r.client_id
+             JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE t.created_at >= DATE_FORMAT(CURDATE() - INTERVAL 5 MONTH, '%Y-%m-01')
+               AND {$realClient}
+               AND {$realProvider}
+             GROUP BY DATE_FORMAT(t.created_at, '%Y-%m'), DATE_FORMAT(t.created_at, '%b')
+             ORDER BY month_key"
+        )
+    );
+
+    $statusDistribution = fetch_all_assoc(
+        run_query(
+            "SELECT r.status, COUNT(*) AS total
+             FROM service_requests r
+             JOIN users client ON client.id = r.client_id
+             LEFT JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE {$realClient}
+               AND (provider.id IS NULL OR {$realProvider})
+             GROUP BY r.status
+             ORDER BY total DESC"
+        )
+    );
+
+    $categorySales = fetch_all_assoc(
+        run_query(
+            "SELECT
+                r.category,
+                COUNT(*) AS requests_count,
+                COALESCE(SUM(t.final_price), 0) AS revenue
+             FROM service_requests r
+             JOIN users client ON client.id = r.client_id
+             LEFT JOIN transactions t ON t.request_id = r.id
+             LEFT JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE {$realClient}
+               AND (provider.id IS NULL OR {$realProvider})
+             GROUP BY r.category
+             ORDER BY revenue DESC, requests_count DESC
+             LIMIT 5"
+        )
+    );
+
+    $topProviders = fetch_all_assoc(
+        run_query(
+            "SELECT
+                provider.name,
+                COUNT(*) AS accepted_sales,
+                COALESCE(SUM(t.final_price), 0) AS revenue
+             FROM service_requests r
+             JOIN users provider ON provider.id = r.selected_provider_id
+             JOIN users client ON client.id = r.client_id
+             LEFT JOIN transactions t ON t.request_id = r.id
+             WHERE r.selected_provider_id IS NOT NULL
+               AND {$realClient}
+               AND {$realProvider}
+             GROUP BY provider.id, provider.name
+             ORDER BY revenue DESC, accepted_sales DESC
+             LIMIT 4"
+        )
+    );
+
+    return [
+        'overview' => array_merge($overview, $requestSummary, $bidSummary, $promotionSummary),
+        'monthly_revenue' => $monthlyRevenue,
+        'status_distribution' => $statusDistribution,
+        'category_sales' => $categorySales,
+        'top_providers' => $topProviders,
+    ];
 }
 
 function admin_latest_users(): array
 {
-    return fetch_all_assoc(run_query('SELECT id, name, email, role, created_at FROM users ORDER BY id DESC LIMIT 10'));
+    return fetch_all_assoc(run_query(
+        'SELECT id, name, email, role, created_at
+         FROM users u
+         WHERE ' . real_user_filter('u') . '
+         ORDER BY id DESC LIMIT 10'
+    ));
 }
 
 function admin_latest_requests(): array
@@ -353,6 +736,9 @@ function admin_latest_requests(): array
             'SELECT r.id, r.title, r.status, r.budget, u.name AS client_name, r.created_at
              FROM service_requests r
              JOIN users u ON u.id = r.client_id
+             LEFT JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE ' . real_user_filter('u') . '
+               AND (provider.id IS NULL OR ' . real_user_filter('provider') . ')
              ORDER BY r.id DESC LIMIT 10'
         )
     );
@@ -368,6 +754,8 @@ function admin_latest_bids(): array
              JOIN service_requests r ON r.id = b.request_id
              JOIN users client ON client.id = r.client_id
              JOIN users provider ON provider.id = b.provider_id
+             WHERE ' . real_user_filter('client') . '
+               AND ' . real_user_filter('provider') . '
              ORDER BY b.id DESC LIMIT 10'
         )
     );
@@ -380,7 +768,24 @@ function admin_latest_transactions(): array
             'SELECT t.*, r.title
              FROM transactions t
              JOIN service_requests r ON r.id = t.request_id
+             JOIN users client ON client.id = r.client_id
+             JOIN users provider ON provider.id = r.selected_provider_id
+             WHERE ' . real_user_filter('client') . '
+               AND ' . real_user_filter('provider') . '
              ORDER BY t.id DESC LIMIT 10'
+        )
+    );
+}
+
+function admin_latest_promotions(): array
+{
+    return fetch_all_assoc(
+        run_query(
+            'SELECT p.*, provider.name AS provider_name
+             FROM promotions p
+             JOIN users provider ON provider.id = p.provider_id
+             WHERE ' . real_user_filter('provider') . '
+             ORDER BY p.id DESC LIMIT 50'
         )
     );
 }

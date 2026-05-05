@@ -9,7 +9,7 @@ $lang = current_lang();
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= e(t('site.title')) ?></title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) filemtime(__DIR__ . '/assets/css/style.css') ?>">
 </head>
 <body>
   <header class="topbar">
@@ -27,7 +27,11 @@ $lang = current_lang();
             <a href="/marketing.php"><i class="bi bi-megaphone"></i><span><?= e(t('nav.marketing')) ?></span></a>
           <?php endif; ?>
           <?php if ($user['role'] === ROLE_ADMIN): ?>
-            <a href="/admin.php"><i class="bi bi-shield-lock"></i><span><?= e(t('nav.admin')) ?></span></a>
+            <a href="/dashboard.php"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+            <a href="/admin.php#customers"><i class="bi bi-people-fill"></i><span>Customers</span></a>
+            <a href="/admin_promotions.php"><i class="bi bi-gift-fill"></i><span>Promotions</span></a>
+            <a href="/admin.php#transactions"><i class="bi bi-cash-stack"></i><span>Transactions</span></a>
+            <a href="/admin_analytics.php"><i class="bi bi-bar-chart-fill"></i><span>Reports</span></a>
           <?php endif; ?>
           <a href="/logout.php"><i class="bi bi-box-arrow-right"></i><span><?= e(t('nav.logout')) ?></span></a>
         <?php else: ?>

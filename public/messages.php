@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/_init.php';
-require_login();
+require_role([ROLE_CLIENT, ROLE_PROVIDER]);
 $user = current_user();
 
 $conversationId = (int) ($_GET['conversation_id'] ?? $_POST['conversation_id'] ?? 0);
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_
     }
 }
 
-$conversations = get_user_conversations((int) $user['id']);
+$conversations = get_user_conversations((int) $user['id'], true);
 $activeConversation = $conversationId > 0 ? get_conversation_for_user($conversationId, (int) $user['id']) : null;
 $messages = $activeConversation ? get_messages($conversationId) : [];
 

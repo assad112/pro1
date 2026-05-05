@@ -23,7 +23,7 @@ require __DIR__ . '/_header.php';
       <h1><?= e(t('admin.title')) ?></h1>
       <p><?= e(t('admin.overview')) ?></p>
     </div>
-    <a class="admin-action" href="/dashboard.php"><?= e(t('dashboard.admin_panel')) ?></a>
+    <a class="admin-action" href="/dashboard.php"><?= e(t('dashboard.back_to_dashboard')) ?></a>
   </div>
 
   <div class="stats admin-stats">
@@ -34,7 +34,7 @@ require __DIR__ . '/_header.php';
   </div>
 
   <div class="admin-grid">
-    <section class="card admin-panel">
+    <section id="customers" class="card admin-panel">
       <h2><?= e(t('admin.latest_users')) ?></h2>
       <div class="table-wrap">
         <table>
@@ -83,7 +83,7 @@ require __DIR__ . '/_header.php';
     </section>
   </div>
 
-  <section class="card admin-panel">
+  <section id="transactions" class="card admin-panel">
     <h2><?= e(t('admin.latest_bids')) ?></h2>
     <div class="table-wrap">
       <table>

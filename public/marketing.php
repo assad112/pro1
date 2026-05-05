@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$promotions = get_provider_promotions((int) $user['id']);
+$promotions = get_provider_promotions((int) $user['id'], true);
 require __DIR__ . '/_header.php';
 ?>
 <section class="card">

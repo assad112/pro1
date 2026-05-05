@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/_init.php';
-require_login();
+require_role([ROLE_CLIENT, ROLE_PROVIDER]);
 $user = current_user();
 $error = '';
 $ok = '';
@@ -24,8 +24,8 @@ if ($user['role'] === ROLE_CLIENT && $_SERVER['REQUEST_METHOD'] === 'POST' && ($
     }
 }
 
-$clientPending = $user['role'] === ROLE_CLIENT ? get_completed_requests_for_review((int) $user['id']) : [];
-$providerReviews = $user['role'] === ROLE_PROVIDER ? get_provider_reviews((int) $user['id']) : [];
+$clientPending = $user['role'] === ROLE_CLIENT ? get_completed_requests_for_review((int) $user['id'], true) : [];
+$providerReviews = $user['role'] === ROLE_PROVIDER ? get_provider_reviews((int) $user['id'], true) : [];
 
 require __DIR__ . '/_header.php';
 ?>
