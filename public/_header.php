@@ -1,9 +1,8 @@
 <?php
 $user = current_user();
-$lang = current_lang();
 ?>
 <!doctype html>
-<html lang="<?= e($lang) ?>" dir="<?= e(page_dir()) ?>">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,11 +36,6 @@ $lang = current_lang();
         <?php else: ?>
           <a href="/login.php"><i class="bi bi-box-arrow-in-left"></i><span><?= e(t('nav.login')) ?></span></a>
           <a href="/register.php"><i class="bi bi-person-plus"></i><span><?= e(t('nav.register')) ?></span></a>
-        <?php endif; ?>
-        <?php if ($lang === 'ar'): ?>
-          <a href="<?= e(switch_lang_url('en')) ?>"><i class="bi bi-translate"></i><span><?= e(t('lang.en')) ?></span></a>
-        <?php else: ?>
-          <a href="<?= e(switch_lang_url('ar')) ?>"><i class="bi bi-translate"></i><span><?= e(t('lang.ar')) ?></span></a>
         <?php endif; ?>
       </nav>
     </div>

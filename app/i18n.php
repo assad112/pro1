@@ -6,21 +6,17 @@ function set_language_from_request(): void
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
     }
-    $lang = $_GET['lang'] ?? '';
-    if (in_array($lang, ['ar', 'en'], true)) {
-        $_SESSION['lang'] = $lang;
-    }
+    unset($_SESSION['lang']);
 }
 
 function current_lang(): string
 {
-    $lang = $_SESSION['lang'] ?? 'ar';
-    return in_array($lang, ['ar', 'en'], true) ? $lang : 'ar';
+    return 'en';
 }
 
 function page_dir(): string
 {
-    return current_lang() === 'ar' ? 'rtl' : 'ltr';
+    return 'ltr';
 }
 
 function t(string $key, array $replace = []): string
@@ -39,8 +35,6 @@ function t(string $key, array $replace = []): string
             'nav.login' => 'دخول',
             'nav.register' => 'تسجيل',
             'nav.language' => 'اللغة',
-            'lang.ar' => 'العربية',
-            'lang.en' => 'English',
             'common.role' => 'الدور',
 
             'role.client' => 'عميل',
@@ -222,8 +216,6 @@ function t(string $key, array $replace = []): string
             'nav.login' => 'Login',
             'nav.register' => 'Register',
             'nav.language' => 'Language',
-            'lang.ar' => 'Arabic',
-            'lang.en' => 'English',
             'common.role' => 'Role',
 
             'role.client' => 'Client',
@@ -394,25 +386,11 @@ function t(string $key, array $replace = []): string
         ]
     ];
 
-    $lang = current_lang();
-    $text = $translations[$lang][$key] ?? $translations['ar'][$key] ?? $key;
+    $text = $translations['en'][$key] ?? $key;
     foreach ($replace as $k => $v) {
         $text = str_replace('{' . $k . '}', (string) $v, $text);
     }
     return $text;
-}
-
-function switch_lang_url(string $lang): string
-{
-    $uri = $_SERVER['REQUEST_URI'] ?? '/dashboard.php';
-    $parts = parse_url($uri);
-    $path = $parts['path'] ?? '/dashboard.php';
-    $query = [];
-    if (!empty($parts['query'])) {
-        parse_str($parts['query'], $query);
-    }
-    $query['lang'] = $lang;
-    return $path . '?' . http_build_query($query);
 }
 
 function status_label(string $status): string

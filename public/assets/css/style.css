@@ -438,6 +438,7 @@ a {
 }
 
 .metric-card {
+  position: relative;
   min-height: 168px;
   border: 1px solid rgba(170, 120, 120, 0.22);
   border-radius: 14px;
@@ -445,6 +446,61 @@ a {
   padding: 14px;
   overflow: hidden;
   min-width: 0;
+}
+
+.has-tooltip::after {
+  content: attr(data-tooltip-title) "\A" attr(data-tooltip-value);
+  position: absolute;
+  right: 14px;
+  bottom: calc(100% + 10px);
+  z-index: 5;
+  min-width: 112px;
+  width: max-content;
+  max-width: min(220px, calc(100% - 28px));
+  border: 1px solid rgba(170, 120, 120, 0.26);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(112, 59, 77, 0.14);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 6px 8px;
+  pointer-events: none;
+  white-space: pre-line;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.has-tooltip::before {
+  content: "";
+  position: absolute;
+  right: 28px;
+  bottom: calc(100% + 3px);
+  z-index: 6;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid rgba(170, 120, 120, 0.26);
+  border-bottom: 1px solid rgba(170, 120, 120, 0.26);
+  background: rgba(255, 255, 255, 0.96);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px) rotate(45deg);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.has-tooltip:hover::after,
+.has-tooltip:hover::before,
+.has-tooltip:focus-within::after,
+.has-tooltip:focus-within::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.has-tooltip:hover::before,
+.has-tooltip:focus-within::before {
+  transform: translateY(0) rotate(45deg);
 }
 
 .metric-title {

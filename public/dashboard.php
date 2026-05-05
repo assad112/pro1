@@ -129,7 +129,7 @@ require __DIR__ . '/_header.php';
     </div>
 
     <div class="monitor-grid">
-      <article class="metric-card">
+      <article class="metric-card has-tooltip" data-tooltip-title="Sales Revenue" data-tooltip-value="<?= e(number_format((float) ($adminOverview['total_revenue'] ?? 0), 2)) ?>">
         <div class="metric-title"><i class="bi bi-currency-dollar"></i>Sales Revenue</div>
         <strong class="revenue-number"><?= e(number_format((float) ($adminOverview['total_revenue'] ?? 0), 2)) ?></strong>
         <span class="muted">Total discounts <?= e(number_format((float) ($adminOverview['total_discount'] ?? 0), 2)) ?></span>
@@ -139,7 +139,7 @@ require __DIR__ . '/_header.php';
         </div>
       </article>
 
-      <article class="metric-card">
+      <article class="metric-card has-tooltip" data-tooltip-title="Bid Conversion" data-tooltip-value="<?= $adminConversionPercent ?>%">
         <div class="metric-title"><i class="bi bi-check2-circle"></i>Bid Conversion</div>
         <div class="gauge" style="--goal: <?= e((string) round($adminConversionPercent / 2, 1)) ?>%;">
           <span><?= $adminConversionPercent ?>%</span>
@@ -150,7 +150,7 @@ require __DIR__ . '/_header.php';
         </div>
       </article>
 
-      <article class="metric-card trend-card">
+      <article class="metric-card trend-card has-tooltip" data-tooltip-title="Revenue Trend" data-tooltip-value="<?= e(count($adminMonthlyRevenue) > 0 ? number_format((float) end($adminMonthlyRevenue)['revenue'], 2) : '0.00') ?>">
         <div class="metric-title"><i class="bi bi-graph-up-arrow"></i>Revenue Trend</div>
         <svg class="sparkline" viewBox="0 0 200 90" role="img" aria-label="Revenue Trend">
           <path d="M10 78 H190" />
